@@ -61,13 +61,18 @@ else:
 ####################################################
 
 
-debug_exports = False
+debug_exports = True
 debug_trace = False
 
 def debugprint(info):
     if debug_trace:
         print(info)
 
+def use_joystick():
+    return joystick is not None and joystick != "NONE"
+
+def use_oled():
+    return oled_mount_type is not None and oled_mount_type != "NONE"
 
 if oled_mount_type is not None and oled_mount_type != "NONE":
     for item in oled_configurations[oled_mount_type]:
@@ -108,7 +113,7 @@ if default_1U_cluster:
 else:
     double_plate_height = (.95*sa_double_length - mount_height) / 3
 
-if oled_mount_type is not None and oled_mount_type != "NONE":
+if oled_mount_type is not None and oled_mount_type != "NONE" and not use_joystick():
     left_wall_x_offset = oled_left_wall_x_offset_override
     left_wall_z_offset = oled_left_wall_z_offset_override
     left_wall_lower_y_offset = oled_left_wall_lower_y_offset
@@ -527,7 +532,7 @@ def connectors():
             places.append(key_place(web_post_bl(), column + 1, row))
             places.append(key_place(web_post_tl(), column + 1, row + 1))
             hulls.append(triangle_hulls(places))
-
+            
     return union(hulls)
 
 
@@ -706,6 +711,9 @@ def default_thumb(side="right"):
     shape = thumb_1x_layout(rotate(single_plate(side=side), (0, 0, -90)))
     shape = union([shape, thumb_15x_layout(rotate(single_plate(side=side), (0, 0, -90)))])
     shape = union([shape, thumb_15x_layout(double_plate(), plate=False)])
+
+    export_file(shape=shape, fname=path.join(r"..", "things", r"debug_thumb"))
+
     return shape
 
 
@@ -1621,16 +1629,18 @@ def right_wall():
 
 def left_wall():
     print('left_wall()')
-    shape = union([wall_brace(
-        (lambda sh: key_place(sh, 0, 0)), 0, 1, web_post_tl(),
-        (lambda sh: left_key_place(sh, 0, 1)), 0, 1, web_post(),
-    )])
+    #shape = union([wall_brace(
+    #    (lambda sh: key_place(sh, 0, 0)), 0, 1, web_post_tl(),
+    #    (lambda sh: left_key_place(sh, 0, 1)), 0, 1, web_post(),
+    #)])
 
-    shape = union([shape, wall_brace(
-        (lambda sh: left_key_place(sh, 0, 1)), 0, 1, web_post(),
-        (lambda sh: left_key_place(sh, 0, 1)), -1, 0, web_post(),
-    )])
+    #shape = union([shape, wall_brace(
+    #    (lambda sh: left_key_place(sh, 0, 1)), 0, 1, web_post(),
+    #    (lambda sh: left_key_place(sh, 0, 1)), -1, 0, web_post(),
+    #)])
 
+    #export_file(shape=shape, fname=path.join(r"..", "things", r"debug_left_wall1"))
+    
     for i in range(lastrow):
         y = i
         low = (y == (lastrow-1))
@@ -1644,8 +1654,11 @@ def left_wall():
             left_key_place(web_post(), y, 1),
             left_key_place(web_post(), y, -1, low_corner=low),
         ))
-        shape = union([shape, temp_shape1])
-        shape = union([shape, temp_shape2])
+        #shape = temp_shape1 # union([shape, temp_shape1])
+        if i == 0:
+            shape = temp_shape2
+        else:
+            shape = union([shape, temp_shape2])
 
     for i in range(lastrow - 1):
         y = i + 1
@@ -1660,9 +1673,11 @@ def left_wall():
             left_key_place(web_post(), y, 1),
             left_key_place(web_post(), y - 1, -1),
         ))
-        shape = union([shape, temp_shape1])
+        #shape = union([shape, temp_shape1])
         shape = union([shape, temp_shape2])
 
+    export_file(shape=shape, fname=path.join(r"..", "things", r"debug_left_wall"))
+        
     return shape
 
 
@@ -1717,16 +1732,16 @@ def default_thumb_walls():
         shape = union([wall_brace(thumb_mr_place, 0, -1, web_post_br(), thumb_tr_place, 0, -1, thumb_post_br())])
     shape = union([shape, wall_brace(thumb_mr_place, 0, -1, web_post_br(), thumb_mr_place, 0, -1, web_post_bl())])
     shape = union([shape, wall_brace(thumb_br_place, 0, -1, web_post_br(), thumb_br_place, 0, -1, web_post_bl())])
-    shape = union([shape, wall_brace(thumb_ml_place, -0.3, 1, web_post_tr(), thumb_ml_place, 0, 1, web_post_tl())])
-    shape = union([shape, wall_brace(thumb_bl_place, 0, 1, web_post_tr(), thumb_bl_place, 0, 1, web_post_tl())])
+    #shape = union([shape, wall_brace(thumb_ml_place, -0.3, 1, web_post_tr(), thumb_ml_place, 0, 1, web_post_tl())])
+    #shape = union([shape, wall_brace(thumb_bl_place, 0, 1, web_post_tr(), thumb_bl_place, 0, 1, web_post_tl())])
     shape = union([shape, wall_brace(thumb_br_place, -1, 0, web_post_tl(), thumb_br_place, -1, 0, web_post_bl())])
     shape = union([shape, wall_brace(thumb_bl_place, -1, 0, web_post_tl(), thumb_bl_place, -1, 0, web_post_bl())])
     # thumb, corners
     shape = union([shape, wall_brace(thumb_br_place, -1, 0, web_post_bl(), thumb_br_place, 0, -1, web_post_bl())])
-    shape = union([shape, wall_brace(thumb_bl_place, -1, 0, web_post_tl(), thumb_bl_place, 0, 1, web_post_tl())])
+    #shape = union([shape, wall_brace(thumb_bl_place, -1, 0, web_post_tl(), thumb_bl_place, 0, 1, web_post_tl())])
     # thumb, tweeners
     shape = union([shape, wall_brace(thumb_mr_place, 0, -1, web_post_bl(), thumb_br_place, 0, -1, web_post_br())])
-    shape = union([shape, wall_brace(thumb_ml_place, 0, 1, web_post_tl(), thumb_bl_place, 0, 1, web_post_tr())])
+    #shape = union([shape, wall_brace(thumb_ml_place, 0, 1, web_post_tl(), thumb_bl_place, 0, 1, web_post_tr())])
     shape = union([shape, wall_brace(thumb_bl_place, -1, 0, web_post_bl(), thumb_br_place, -1, 0, web_post_tl())])
     if default_1U_cluster:
         shape = union([shape, wall_brace(thumb_tr_place, 0, -1, web_post_br(), (lambda sh: key_place(sh, 3, lastrow)), 0, -1, web_post_bl())])
@@ -1948,7 +1963,8 @@ def case_walls():
             right_wall(),
             front_wall(),
             thumb_walls(),
-            thumb_connection(),
+            #thumb_connection(),
+            joystick_wall()
         ])
     )
 
@@ -2049,7 +2065,7 @@ def external_mount_hole():
     )
     return shape
 
-if oled_center_row is not None:
+if oled_mount_type is not None and oled_mount_type != "NONE" and oled_center_row is not None:
     base_pt1 = key_position(
         list(np.array([-mount_width/2, 0, 0]) + np.array([0, (mount_height / 2), 0])), 0, oled_center_row-1
     )
@@ -2467,20 +2483,23 @@ def screw_insert_thumb(bottom_radius, top_radius, height):
 
 def screw_insert_all_shapes(bottom_radius, top_radius, height, offset=0):
     print('screw_insert_all_shapes()')
-    shape = (
-        translate(screw_insert(0, 0, bottom_radius, top_radius, height), (0, 0, offset)),
-        translate(screw_insert(0, lastrow-1, bottom_radius, top_radius, height), (0, left_wall_lower_y_offset, offset)),
+    shapes = [
         translate(screw_insert(3, lastrow, bottom_radius, top_radius, height), (0, 0, offset)),
         translate(screw_insert(3, 0, bottom_radius, top_radius, height), (0,0, offset)),
         translate(screw_insert(lastcol, 0, bottom_radius, top_radius, height), (0, 0, offset)),
         translate(screw_insert(lastcol, lastrow-1, bottom_radius, top_radius, height), (0, 0, offset)),
         translate(screw_insert_thumb(bottom_radius, top_radius, height), (0, 0, offset)),
-    )
+    ]
 
-    return shape
-
-
-
+    if use_joystick():
+        shapes.append(translate(screw_insert(0, 0, bottom_radius, top_radius, height), (0, 10, offset)))    
+        shapes.append(translate(screw_insert_joystick(bottom_radius, top_radius, height), (0, 0, offset)))
+    else:
+        shapes.extend([
+            translate(screw_insert(0, 0, bottom_radius, top_radius, height), (0, 0, offset)),
+            translate(screw_insert(0, lastrow-1, bottom_radius, top_radius, height), (0, left_wall_lower_y_offset, offset)),
+        ])
+    return shapes
 
 def screw_insert_holes():
     return screw_insert_all_shapes(
@@ -2538,7 +2557,6 @@ def wire_posts():
             ])
     return shape
 
-
 def model_side(side="right"):
     print('model_right()')
     shape = union([key_holes(side=side)])
@@ -2552,6 +2570,8 @@ def model_side(side="right"):
     if debug_exports:
         export_file(shape=thumb_shape, fname=path.join(r"..", "things", r"debug_thumb_shape"))
     shape = union([shape, thumb_shape])
+    if use_joystick():
+        shape = union([shape, joystick_shape()])
     thumb_connector_shape = thumb_connectors()
     shape = union([shape, thumb_connector_shape])
     if debug_exports:
@@ -2584,20 +2604,21 @@ def model_side(side="right"):
     if controller_mount_type in ['RJ9_USB_TEENSY', 'RJ9_USB_WALL']:
         shape = union([shape, rj9_holder()])
 
-    if oled_mount_type == "UNDERCUT":
-        hole, frame = oled_undercut_mount_frame()
-        shape = difference(shape, [hole])
-        shape = union([shape, frame])
+    if not use_joystick():
+        if oled_mount_type == "UNDERCUT":
+            hole, frame = oled_undercut_mount_frame()
+            shape = difference(shape, [hole])
+            shape = union([shape, frame])
 
-    elif oled_mount_type == "SLIDING":
-        hole, frame = oled_sliding_mount_frame()
-        shape = difference(shape, [hole])
-        shape = union([shape, frame])
+        elif oled_mount_type == "SLIDING":
+            hole, frame = oled_sliding_mount_frame()
+            shape = difference(shape, [hole])
+            shape = union([shape, frame])
 
-    elif oled_mount_type == "CLIP":
-        hole, frame = oled_clip_mount_frame()
-        shape = difference(shape, [hole])
-        shape = union([shape, frame])
+        elif oled_mount_type == "CLIP":
+            hole, frame = oled_clip_mount_frame()
+            shape = difference(shape, [hole])
+            shape = union([shape, frame])
 
     block = box(350, 350, 40)
     block = translate(block, (0, 0, -20))
@@ -2697,6 +2718,271 @@ def baseplate(wedge_angle=None):
 
         return sl.projection(cut=True)(shape)
 
+joystick_oled_rim = 10
+joystick_plate_thickness = 8 #plate_thickness
+joystick_z_height = 30 # Space under plate for gimbal mechanism.
+
+def joystick_origin():
+    origin = thumborigin()
+    offset = [-85, 20, -20, 0]
+    for i in range(0, 3):
+        origin[i] += offset[i]
+    origin[2] = joystick_z_height + joystick_plate_thickness/2
+    return origin
+    
+def joystick_shape():
+    y_offset = 0
+    top = box(65, 65, joystick_plate_thickness)
+
+    if use_oled():
+        mount_plate = translate(box(65, joystick_oled_rim, joystick_plate_thickness), [0, 65./2 + 5, 0])
+        top = union([top, mount_plate])
+        oled_mount_location_xyz[0] = 0
+        oled_mount_location_xyz[1] = 65./2 + 1
+        oled_mount_location_xyz[2] = joystick_plate_thickness / 2 - oled_mount_depth / 2
+        oled_mount_rotation_xyz[0] = 0
+        oled_mount_rotation_xyz[1] = 0
+        oled_mount_rotation_xyz[2] = 90
+
+        if oled_mount_type == "UNDERCUT":
+            oled_hole, oled_frame = oled_undercut_mount_frame()
+        elif oled_mount_type == "SLIDING":
+            oled_hole, oled_frame = oled_sliding_mount_frame()
+        elif oled_mount_type == "CLIP":
+            oled_hole, oled_frame = oled_clip_mount_frame()
+
+        top = difference(top, [oled_hole])
+        top = union([top, oled_frame])
+
+    cutout = translate(cylinder(radius=24.25, height=2*joystick_plate_thickness), [0, y_offset, -joystick_plate_thickness/2])
+    screwhole = translate(cylinder(radius=1.6, height=2*joystick_plate_thickness), [0, 0, -joystick_plate_thickness/2])
+    corner_clearance = translate(cylinder(radius=5, height=5), [0, 0, -joystick_plate_thickness/2 - 5])
+    countersink = translate(cylinder(radius=5.7/2, height=3.1), [0, 0, joystick_plate_thickness/2 - 3.1])
+    screw_clearance = translate(cylinder(radius=5.7/2, height=20), [0, 0, joystick_plate_thickness/2])
+    screw_dist = 54
+    cutouts = [cutout]
+    locator = translate(cylinder(radius=5.6/2, height=2.5), [0, 0, -joystick_plate_thickness/2])
+    for i in range(-1, 2, 2):
+        for j in range(-1, 2, 2):
+            cutouts.append(translate(screwhole, [i * screw_dist/2.0, j * screw_dist/2.0 + y_offset, 0]))
+            cutouts.append(translate(locator, [i * screw_dist/2.0, j * screw_dist/2.0 + y_offset, 0]))
+            cutouts.append(translate(corner_clearance, [i * screw_dist/2.0, j * screw_dist/2.0 + y_offset, 0])) # Gimbal top plate corners
+            cutouts.append(translate(countersink, [i * screw_dist/2.0, j * screw_dist/2.0 + y_offset, 0]))
+            cutouts.append(translate(screw_clearance, [i * screw_dist/2.0, j * screw_dist/2.0 + y_offset, 0]))
+    cutouts.append(translate(box(60, 57, 10), [0, y_offset, -joystick_plate_thickness/2 -10.0/2])) # Gimbal top plate
+    cutout = union(cutouts)
+    #top = difference(top, cutouts)
+    if debug_exports:
+        export_file(shape=top, fname=path.join(r"..", "things", r"debug_joystick"))
+        
+    shape = translate(top, joystick_origin())
+    cutout = translate(cutout, joystick_origin())
+    shape = union([shape, joystick_connection()])
+    shape = difference(shape, [cutout])
+    if show_caps:
+        stick = translate(cylinder(radius=4, height=28), [0, y_offset, -joystick_plate_thickness/2 + 3.2])
+        stick = translate(stick, joystick_origin())
+        shape = union([shape, stick])
+    return shape
+
+def joystick_corners():
+    origin = joystick_origin()
+    size = 65./2
+    for i in range(-1, 2, 2):
+        for j in range(-1, 2, 2):
+            yield [origin[0] + i * size, origin[1] + j * size, origin[2]]
+
+joystick_z_offset = plate_thickness - joystick_plate_thickness / 2
+            
+def joystick_tl_place(shape):
+    place = joystick_origin()
+    size = 65./2
+    place[0] -= size
+    place[1] += size
+    if use_oled():
+        place[1] += joystick_oled_rim
+    place[2] -= joystick_z_offset
+    return translate(shape, place)
+
+def joystick_bl_place(shape):
+    place = joystick_origin()
+    size = 65./2
+    place[0] -= size
+    place[1] -= size
+    place[2] -= joystick_z_offset
+    return translate(shape, place)
+
+def joystick_bm_place(shape):
+    place = joystick_origin()
+    size = 65./2
+    place[0] -= 5
+    place[1] -= size
+    place[2] -= joystick_z_offset
+    return translate(shape, place)
+
+def joystick_bm2_place(shape):
+    place = joystick_origin()
+    size = 65./2
+    place[0] -= 5
+    place[1] -= size + 4.5
+    place[2] -= joystick_z_offset + 1
+    return translate(shape, place)
+
+def joystick_tr_place(shape): 
+    place = joystick_origin()
+    size = 65./2
+    place[0] += size
+    place[1] += size
+    if use_oled():
+        place[1] += joystick_oled_rim
+    place[2] -= joystick_z_offset
+    return translate(shape, place)   
+
+def joystick_br_place(shape): 
+    place = joystick_origin()
+    size = 65./2
+    place[0] += size
+    place[1] -= size
+    place[2] -= joystick_z_offset
+    return translate(shape, place)   
+
+def joystick_connection():
+    joystick_x_offset = -8
+    joystick_x, joystick_y, joystick_z = joystick_origin()
+    joystick_z -= joystick_z_offset
+    shapes = []
+    for i in range(lastrow):
+        y = i
+        low = (y == (lastrow-1))
+        (x, y, z) = left_key_position(i, 1)
+        (x2, y2, z2) = left_key_position(i, -1, low_corner=low)
+        x2 = x2 + joystick_x_offset if not low else joystick_origin()[0] + 65./2
+        outer_x_offset = joystick_x_offset if i > 0 else joystick_x_offset + 1
+        outer_z = joystick_z if i > 0 else joystick_z - 1
+        shapes.append(hull_from_shapes([
+            left_key_place(web_post(), i, 1),
+            left_key_place(web_post(), i, -1, low_corner=low),
+            #key_place(web_post_tl(), 0, i),
+            #key_place(web_post_bl(), 0, i),
+            translate(web_post(), (x + outer_x_offset, y, outer_z)),
+            translate(web_post(), (x2, y2, joystick_z))
+            ]))
+
+    for i in range(lastrow - 1):
+        y = i + 1
+        low = (y == (lastrow-1))
+        (x1, y1, z1) = left_key_position(y, 1)
+        (x2, y2, z2) = left_key_position(y - 1, -1, low_corner=low)
+        shapes.append(hull_from_shapes([
+            left_key_place(web_post(), y, 1),
+            left_key_place(web_post(), y - 1, -1),
+            translate(web_post(), (x1 + joystick_x_offset, y1, joystick_z)),
+            translate(web_post(), (x2 + joystick_x_offset, y2, joystick_z)),
+        ]))
+
+    i = lastrow - 1
+    (x2, y2, z2) = left_key_position(i, -1, low_corner=True)
+    x2 = joystick_origin()[0] + 65./2
+    shapes.append(hull_from_shapes([
+        left_key_place(web_post(), i, -1),
+        translate(web_post(), (x2, y2, joystick_z)),
+        thumb_tl_place(thumb_post_tl())]))
+    shapes.append(hull_from_shapes([
+        translate(web_post(), (x2, y2, joystick_z)),
+        thumb_tl_place(thumb_post_tl()),
+        joystick_br_place(web_post())
+    ]))
+    shapes.append(hull_from_shapes([
+        thumb_tl_place(thumb_post_tl()),
+        joystick_br_place(web_post()),
+        thumb_ml_place(web_post_tr())
+    ]))
+    shapes.append(hull_from_shapes([
+        joystick_br_place(web_post()),
+        joystick_bm_place(web_post()),
+        joystick_bm2_place(web_post()),
+        thumb_ml_place(web_post_tr())
+    ]))
+    shapes.append(hull_from_shapes([
+        thumb_ml_place(web_post_tl()),
+        thumb_ml_place(web_post_tr()),
+        joystick_bm2_place(web_post())
+    ]))
+    shapes.append(hull_from_shapes([
+        thumb_ml_place(web_post_tl()),
+        joystick_bm2_place(web_post()),
+        thumb_bl_place(web_post_tr())
+    ]))
+    shapes.append(hull_from_shapes([
+        thumb_bl_place(web_post_tl()),
+        joystick_bm2_place(web_post()),
+        thumb_bl_place(web_post_tr())
+    ]))
+    #shapes.append(hull_from_shapes([
+    #    thumb_bl_place(web_post_tl()),
+    #    joystick_bm_place(web_post()),
+    #    joystick_bl_place(web_post())
+    #]))
+    shapes.append(hull_from_shapes([
+        thumb_tl_place(thumb_post_tl()),
+        left_key_place(web_post(), lastrow - 1, -1, low_corner=True),
+        key_place(web_post_bl(), 0, lastrow - 1)
+    ]))
+    
+    return union(shapes)
+    
+def joystick_wall():
+    return union([
+        #wall_brace(joystick_tl_place, 0, 0, web_post(), joystick_bl_place, 0, 0, web_post()), # tl bl
+        #wall_brace(joystick_tl_place, 0, 0, web_post(), joystick_tr_place, 0, 0, web_post()), # tl tr
+        #wall_brace(joystick_bl_place, 0, -1, web_post(), thumb_bl_place, -1, 0, web_post_tl()), # bl bl
+        wall_brace(joystick_bm_place, 0, -1, web_post(), thumb_bl_place, -1, 0, web_post_tl()), # bl bl
+        wall_brace(joystick_bm_place, 0, -1, web_post(), joystick_bl_place, 0, -1, web_post()), # bl bl
+        wall_brace(joystick_bl_place, -1, 0, web_post(), joystick_bl_place, 0, -1, web_post()),
+        wall_brace(joystick_bl_place, -1, 0, web_post(), joystick_tl_place, -1, 0, web_post()),
+        wall_brace(joystick_tl_place, -1, 0, web_post(), joystick_tl_place, 0, 1, web_post()),
+        #wall_brace(joystick_tl_place, 0, 1, web_post(), joystick_tr_place, -2, 1, web_post()),
+        wall_brace(joystick_tl_place, 0, 1, web_post(), joystick_tr_place, -0.4, 1, web_post()),
+        wall_brace(
+            # Was             (lambda sh: left_key_place(sh, 0, 1,)), -1, 1.3, web_post(),
+            (lambda sh: left_key_place(sh, 0, 1,)), -0.5, 0.9, web_post(),
+            # joystick_tr_place, -2, 1, web_post()
+            joystick_tr_place, -0.4, 1, web_post()
+        ),
+        wall_brace(
+            # Was (lambda sh: left_key_place(sh, 0, 1,)), -1, 1.3, web_post(),
+            (lambda sh: left_key_place(sh, 0, 1,)), -0.5, 0.9, web_post(),
+            (lambda sh: key_place(sh, 0, 0,)), 0, 1, web_post_tl(),
+        )
+
+    ])
+
+def screw_insert_joystick(bottom_radius, top_radius, height):
+    shape = screw_insert_shape(bottom_radius, top_radius, height)
+    size = 65./2
+    place = joystick_origin()
+    place[0] -= 5
+    place[1] -= size + 4
+    place[2] = height / 2
+    shapes = []
+    shapes.append(translate(shape, place))
+    place = joystick_origin()
+    place[0] -= size - 4
+    place[1] += size + 4
+    if use_oled():
+        place[1] += joystick_oled_rim
+    place[2] = height / 2
+    shapes.append(translate(shape, place))
+    place = joystick_origin()
+    place[0] -= size + 3
+    if use_oled():
+        place[1] += joystick_oled_rim/2
+    else:
+        place[1] -= 5
+    place[2] = height / 2
+    shapes.append(translate(shape, place))
+    return union(shapes)
+    
 def run():
 
     mod_r = model_side(side="right")
