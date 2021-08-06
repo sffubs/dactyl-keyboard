@@ -71,7 +71,7 @@
         17.5
     ],
     "fixed_tenting": 0.0,
-    "plate_style": "HS_NOTCH",
+    "plate_style": "NOTCH",
     "hole_keyswitch_height": 14.0,
     "hole_keyswitch_width": 14.0,
     "nub_keyswitch_height": 14.4,
