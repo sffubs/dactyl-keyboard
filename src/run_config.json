@@ -79,6 +79,7 @@
     "undercut_keyswitch_height": 14.0,
     "undercut_keyswitch_width": 14.0,
     "notch_width": 5.0,
+    "pcb": "amoeba-royale",
     "sa_profile_key_height": 12.7,
     "sa_length": 18.25,
     "sa_double_length": 37.5,

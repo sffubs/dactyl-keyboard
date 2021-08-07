@@ -74,6 +74,9 @@ def use_joystick():
 def use_oled():
     return oled_mount_type is not None and oled_mount_type != "NONE"
 
+def use_pcb():
+    return pcb is not None and pcb != "NONE"
+
 if oled_mount_type is not None and oled_mount_type != "NONE":
     for item in oled_configurations[oled_mount_type]:
         locals()[item] = oled_configurations[oled_mount_type][item]
@@ -161,6 +164,10 @@ def column_offset(column: int) -> list:
 
 # column_style='fixed'
 
+if use_pcb():
+    pcb_shape = translate(import_file(path.join("..", "src", pcb)), [0, 0, -1.6])
+    #pcb_clearance_shape = translate(import_file(path.join("..", "src", pcb + "-clearance")), [0, 0, -1.6])
+    pcb_clearance_shape = translate(box(19.2, 19.2, 3), [0, 0, -1.5])
 
 def single_plate(cylinder_segments=100, side="right"):
 
@@ -430,14 +437,17 @@ def key_holes(side="right"):
     debugprint('key_holes()')
     # hole = single_plate()
     holes = []
+    clearances = []
     for column in range(ncols):
         for row in range(nrows):
             if (column in [2, 3]) or (not row == lastrow):
                 holes.append(key_place(single_plate(side=side), column, row))
+                clearances.append(key_place(pcb_clearance_shape, column, row))
 
     shape = union(holes)
+    clearance = union(clearances)
 
-    return shape
+    return (shape, clearance)
 
 
 def caps():
@@ -709,12 +719,15 @@ def default_thumbcaps():
 def default_thumb(side="right"):
     print('thumb()')
     shape = thumb_1x_layout(rotate(single_plate(side=side), (0, 0, -90)))
+    clearance = thumb_1x_layout(rotate(pcb_clearance_shape, (0, 0, -90)))
     shape = union([shape, thumb_15x_layout(rotate(single_plate(side=side), (0, 0, -90)))])
+    clearance = union([clearance, thumb_15x_layout(rotate(pcb_clearance_shape, (0, 0, -90)))])
     shape = union([shape, thumb_15x_layout(double_plate(), plate=False)])
+    clearance = union([clearance, thumb_15x_layout(pcb_clearance_shape, plate=False)])
 
     export_file(shape=shape, fname=path.join(r"..", "things", r"debug_thumb"))
 
-    return shape
+    return (shape, clearance)
 
 
 def thumb_post_tr():
@@ -2559,19 +2572,23 @@ def wire_posts():
 
 def model_side(side="right"):
     print('model_right()')
-    shape = union([key_holes(side=side)])
+    clearances = []
+    shape, clearance = union([key_holes(side=side)])
+    clearances.append(clearance)
     if debug_exports:
         export_file(shape=shape, fname=path.join(r"..", "things", r"debug_key_plates"))
     connector_shape = connectors()
     shape = union([shape, connector_shape])
     if debug_exports:
         export_file(shape=shape, fname=path.join(r"..", "things", r"debug_connector_shape"))
-    thumb_shape = thumb(side=side)
+    thumb_shape, clearance = thumb(side=side)
+    clearances.append(clearance)
     if debug_exports:
         export_file(shape=thumb_shape, fname=path.join(r"..", "things", r"debug_thumb_shape"))
     shape = union([shape, thumb_shape])
     if use_joystick():
         shape = union([shape, joystick_shape()])
+        clearances.append(joystick_prox_cutout())
     thumb_connector_shape = thumb_connectors()
     shape = union([shape, thumb_connector_shape])
     if debug_exports:
@@ -2620,6 +2637,8 @@ def model_side(side="right"):
             shape = difference(shape, [hole])
             shape = union([shape, frame])
 
+    shape = difference(shape, clearances)
+            
     block = box(350, 350, 40)
     block = translate(block, (0, 0, -20))
     shape = difference(shape, [block])
