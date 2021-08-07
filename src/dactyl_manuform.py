@@ -2802,7 +2802,22 @@ def joystick_shape():
         stick = translate(cylinder(radius=4, height=28), [0, y_offset, -joystick_plate_thickness/2 + 3.2])
         stick = translate(stick, joystick_origin())
         shape = union([shape, stick])
+
+        # Also show the daughterboard PCB for fit purposes.
+        gimbal_pcb = import_file(path.join("..", "src", "gimbal_daughterboard"))
+        gimbal_pcb = rotate(gimbal_pcb, [90, 0, 0])
+        gimbal_pcb = translate(gimbal_pcb, joystick_origin())
+        gimbal_pcb = translate(gimbal_pcb, [1, 35, -21])
+        shape = union([shape, gimbal_pcb])
+        
     return shape
+
+def joystick_prox_cutout():
+    prox_cutout = joystick_prox_cutout_shape()
+    #prox_cutout = rotate(prox_cutout, [0, 0, 45])
+    prox_cutout = translate(prox_cutout, joystick_origin())
+    prox_cutout = translate(prox_cutout, [20 + 10, -24 + 10, 1])
+    return prox_cutout
 
 def joystick_corners():
     origin = joystick_origin()
@@ -3001,7 +3016,12 @@ def screw_insert_joystick(bottom_radius, top_radius, height):
     place[2] = height / 2
     shapes.append(translate(shape, place))
     return union(shapes)
-    
+
+def joystick_prox_cutout_shape():
+    shape1 = translate(box(3.94 + 0.2, 2.36 + 0.2, 10), [0, 0, 5])
+    shape2 = translate(box(25, 18, 10), [25./2 - 4 - 2.36/2, 0, -5])
+    return union([shape1, shape2])
+
 def run():
 
     mod_r = model_side(side="right")
