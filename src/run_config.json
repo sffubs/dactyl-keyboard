@@ -2,7 +2,7 @@
     "ENGINE": "cadquery",
     "save_dir": ".",
     "config_name": "DM",
-    "show_caps": true,
+    "show_caps": false,
     "nrows": 4,
     "ncols": 5,
     "alpha": 0.26179916666666664,

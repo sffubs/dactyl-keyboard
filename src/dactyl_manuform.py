@@ -166,10 +166,33 @@ def column_offset(column: int) -> list:
 
 if use_pcb():
     pcb_shape = translate(import_file(path.join("..", "src", pcb)), [0, 0, -1.6])
-    #pcb_clearance_shape = translate(import_file(path.join("..", "src", pcb + "-clearance")), [0, 0, -1.6])
-    pcb_clearance_shape = translate(box(19.2, 19.2, 3), [0, 0, -1.5])
 
-def single_plate(cylinder_segments=100, side="right"):
+def pcb_clearance_shape(pcb_screw="right"):
+    shape = translate(box(19.2, 19.2, 3), [0, 0, -1.6])
+
+    if pcb_screw == "right":
+        shape = union([
+            shape,
+            translate(cylinder(radius=1.1, height=2.5), [9.398, (-2.191 + 0.349) / 2, 0]),
+            translate(cylinder(radius=4.7/2, height=5), [9.398, (-2.191 + 0.349) / 2, -5])
+        ])
+        shape = difference(shape, [
+            translate(cylinder(radius=2.4, height=2), [-9.398, (-2.191 + 0.349) / 2, -2])
+        ])
+    else:
+        shape = union([
+            shape,
+            translate(cylinder(radius=1.1, height=2.5), [-9.398, (-2.191 + 0.349) / 2, 0]),
+            translate(cylinder(radius=4.7/2, height=5), [-9.398, (-2.191 + 0.349) / 2, -5])
+        ])
+        shape = difference(shape, [
+            translate(cylinder(radius=2.4, height=2), [9.398, (-2.191 + 0.349) / 2, -2])
+        ])
+
+    return shape
+
+
+def single_plate(cylinder_segments=100, side="right", pcb_screw="right", high_left=False, high_right=False):
 
     if plate_style in ['NUB', 'HS_NUB']:
         top_wall = box(mount_width, 1.5, plate_thickness)
@@ -218,13 +241,13 @@ def single_plate(cylinder_segments=100, side="right"):
                 keyswitch_height + 2 * clip_undercut,
                 mount_thickness
             )
-            undercut = union([undercut,
-                box(
-                    keyswitch_width + 2 * clip_undercut,
-                    notch_width,
-                    mount_thickness
-                )
-            ])
+            #undercut = union([undercut,
+            #    box(
+            #        keyswitch_width + 2 * clip_undercut,
+            #        notch_width,
+            #        mount_thickness
+            #    )
+            #])
 
         undercut = translate(undercut, (0.0, 0.0, -clip_thickness + mount_thickness / 2.0))
 
@@ -267,8 +290,41 @@ def single_plate(cylinder_segments=100, side="right"):
     if side == "left":
         plate = mirror(plate, 'YZ')
 
+    if use_pcb():
+        if high_left:
+            barrel_height = 0.5
+        else:
+            barrel_height = 2.5
+        if high_right:
+            post_height = 3
+        else:
+            post_height = 5
+            
+        screw_barrel = cylinder(radius=1.1 + 1.2, height=barrel_height)
+        pcb_post = cylinder(radius=2.4/2, height=post_height)
+        if pcb_screw == "right":
+            #screw_barrel = difference(screw_barrel, [translate(box(1.1 + 1.2, 2 * (1.1 + 1.2), 1.0), [(1.1 + 1.2 + 0.5), 0, -1.0/2 + 2.5])])
+            #pcb_post = difference(pcb_post, [translate(box(2.4/2, 2.4, 1.0), [-2.4/4, 0, -1.0/2 + 5])])
+            plate = union([plate,
+                           translate(pcb_post, [-9.398, (-2.191 + 0.349) / 2, -2]),
+                           translate(screw_barrel, [9.398, (-2.191 + 0.349) / 2, 0]),
+            ])
+        else:
+            #screw_barrel = difference(screw_barrel, [translate(box(1.1 + 1.2, 2 * (1.1 + 1.2), 1.0), [-(1.1 + 1.2 + 0.5), 0, -1.0/2 + 2.5])])
+            #pcb_post = difference(pcb_post, [translate(box(2.4/2, 2.4, 1.0), [2.4/4, 0, -1.0/2 + 5])])
+            plate = union([plate,
+                           translate(pcb_post, [9.398, (-2.191 + 0.349) / 2, -2]),
+                           translate(screw_barrel, [-9.398, (-2.191 + 0.349) / 2, 0]),
+            ])            
+        
     return plate
 
+def pcb_post_clip(shape):
+    return difference(shape, [rotate(
+        translate(
+            translate(box(2.4/2, 2.4, 1.5), [-2.4/4 - 0.1, 0, -1.5/2 + 5]),
+            [-9.398, (-2.191 + 0.349) / 2, -2]), [0, 0, -90])
+    ])
 
 ################
 ## SA Keycaps ##
@@ -441,8 +497,14 @@ def key_holes(side="right"):
     for column in range(ncols):
         for row in range(nrows):
             if (column in [2, 3]) or (not row == lastrow):
-                holes.append(key_place(single_plate(side=side), column, row))
-                clearances.append(key_place(pcb_clearance_shape, column, row))
+                if column == ncols - 1:
+                    pcb_screw = "left"
+                else:
+                    pcb_screw = "right"
+                high_left = column in [1, 4]
+                high_right = column in [3]
+                holes.append(key_place(single_plate(side=side, pcb_screw=pcb_screw, high_left=high_left, high_right=high_right), column, row))
+                clearances.append(key_place(pcb_clearance_shape(pcb_screw=pcb_screw), column, row))
 
     shape = union(holes)
     clearance = union(clearances)
@@ -609,16 +671,19 @@ def thumb_bl_place(shape):
 
 def thumb_1x_layout(shape, cap=False):
     debugprint('thumb_1x_layout()')
+    
     if cap:
         shape_list = [
             thumb_mr_place(rotate(shape, [0, 0, thumb_plate_mr_rotation])),
             thumb_ml_place(rotate(shape, [0, 0, thumb_plate_ml_rotation])),
             thumb_br_place(rotate(shape, [0, 0, thumb_plate_br_rotation])),
-            thumb_bl_place(rotate(shape, [0, 0, thumb_plate_bl_rotation])),
+            thumb_bl_place(rotate(mirror(pcb_post_clip(shape), "XZ"), [0, 0, thumb_plate_bl_rotation])),
         ]
 
         if default_1U_cluster:
-            shape_list.append(thumb_tr_place(rotate(rotate(shape, (0, 0, 90)), [0, 0, thumb_plate_tr_rotation])))
+            #shape = mirror(shape, 'XZ')
+            #shape_list.append(thumb_tr_place(rotate(rotate(shape, (0, 0, 90)), [0, 0, thumb_plate_tr_rotation])))
+            shape_list.append(thumb_tr_place(rotate(shape, [0, 0, thumb_plate_tr_rotation])))
             shape_list.append(thumb_tl_place(rotate(shape, [0, 0, thumb_plate_tl_rotation])))
         shapes = add(shape_list)
 
@@ -627,10 +692,12 @@ def thumb_1x_layout(shape, cap=False):
                 thumb_mr_place(rotate(shape, [0, 0, thumb_plate_mr_rotation])),
                 thumb_ml_place(rotate(shape, [0, 0, thumb_plate_ml_rotation])),
                 thumb_br_place(rotate(shape, [0, 0, thumb_plate_br_rotation])),
-                thumb_bl_place(rotate(shape, [0, 0, thumb_plate_bl_rotation])),
+                thumb_bl_place(rotate(mirror(pcb_post_clip(shape), "XZ"), [0, 0, thumb_plate_bl_rotation])),
             ]
         if default_1U_cluster:
-            shape_list.append(thumb_tr_place(rotate(rotate(shape, (0, 0, 90)), [0, 0, thumb_plate_tr_rotation])))
+            #shape = mirror(shape, 'XZ')
+            #shape_list.append(thumb_tr_place(rotate(rotate(shape, (0, 0, 90)), [0, 0, thumb_plate_tr_rotation])))
+            shape_list.append(thumb_tr_place(rotate(shape, [0, 0, thumb_plate_tr_rotation])))
         shapes = union(shape_list)
     return shapes
 
@@ -719,11 +786,11 @@ def default_thumbcaps():
 def default_thumb(side="right"):
     print('thumb()')
     shape = thumb_1x_layout(rotate(single_plate(side=side), (0, 0, -90)))
-    clearance = thumb_1x_layout(rotate(pcb_clearance_shape, (0, 0, -90)))
+    clearance = thumb_1x_layout(rotate(pcb_clearance_shape(), (0, 0, -90)))
     shape = union([shape, thumb_15x_layout(rotate(single_plate(side=side), (0, 0, -90)))])
-    clearance = union([clearance, thumb_15x_layout(rotate(pcb_clearance_shape, (0, 0, -90)))])
+    clearance = union([clearance, thumb_15x_layout(rotate(pcb_clearance_shape(), (0, 0, -90)))])
     shape = union([shape, thumb_15x_layout(double_plate(), plate=False)])
-    clearance = union([clearance, thumb_15x_layout(pcb_clearance_shape, plate=False)])
+    #clearance = union([clearance, thumb_15x_layout(pcb_clearance_shape(), plate=False)])
 
     export_file(shape=shape, fname=path.join(r"..", "things", r"debug_thumb"))
 
