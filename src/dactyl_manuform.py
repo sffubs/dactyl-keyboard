@@ -625,7 +625,7 @@ def thumb_tr_place(shape):
     debugprint('thumb_tr_place()')
     shape = rotate(shape, [10, -15, 10])
     shape = translate(shape, thumborigin())
-    shape = translate(shape, [-12, -16, 3])
+    shape = translate(shape, [-13, -16, 3])
     return shape
 
 
@@ -641,7 +641,7 @@ def thumb_mr_place(shape):
     debugprint('thumb_mr_place()')
     shape = rotate(shape, [-6, -34, 48])
     shape = translate(shape, thumborigin())
-    shape = translate(shape, [-29, -40, -13])
+    shape = translate(shape, [-31, -37, -13])
     return shape
 
 
@@ -649,7 +649,7 @@ def thumb_ml_place(shape):
     debugprint('thumb_ml_place()')
     shape = rotate(shape, [6, -34, 40])
     shape = translate(shape, thumborigin())
-    shape = translate(shape, [-51, -25, -12])
+    shape = translate(shape, [-51, -23, -12])
     return shape
 
 
@@ -677,7 +677,8 @@ def thumb_1x_layout(shape, cap=False):
             thumb_mr_place(rotate(shape, [0, 0, thumb_plate_mr_rotation])),
             thumb_ml_place(rotate(shape, [0, 0, thumb_plate_ml_rotation])),
             thumb_br_place(rotate(shape, [0, 0, thumb_plate_br_rotation])),
-            thumb_bl_place(rotate(mirror(pcb_post_clip(shape), "XZ"), [0, 0, thumb_plate_bl_rotation])),
+            #thumb_bl_place(rotate(mirror(pcb_post_clip(shape), "XZ"), [0, 0, thumb_plate_bl_rotation])),
+            thumb_bl_place(rotate(shape, [0, 0, thumb_plate_bl_rotation])),
         ]
 
         if default_1U_cluster:
@@ -692,12 +693,15 @@ def thumb_1x_layout(shape, cap=False):
                 thumb_mr_place(rotate(shape, [0, 0, thumb_plate_mr_rotation])),
                 thumb_ml_place(rotate(shape, [0, 0, thumb_plate_ml_rotation])),
                 thumb_br_place(rotate(shape, [0, 0, thumb_plate_br_rotation])),
-                thumb_bl_place(rotate(mirror(pcb_post_clip(shape), "XZ"), [0, 0, thumb_plate_bl_rotation])),
+                #thumb_bl_place(rotate(mirror(pcb_post_clip(shape), "XZ"), [0, 0, thumb_plate_bl_rotation])),
+                thumb_bl_place(rotate(shape, [0, 0, thumb_plate_bl_rotation])),
             ]
         if default_1U_cluster:
             #shape = mirror(shape, 'XZ')
             #shape_list.append(thumb_tr_place(rotate(rotate(shape, (0, 0, 90)), [0, 0, thumb_plate_tr_rotation])))
             shape_list.append(thumb_tr_place(rotate(shape, [0, 0, thumb_plate_tr_rotation])))
+            shape_list.append(thumb_tl_place(rotate(shape, [0, 0, thumb_plate_tl_rotation])))
+
         shapes = union(shape_list)
     return shapes
 
@@ -785,11 +789,12 @@ def default_thumbcaps():
 
 def default_thumb(side="right"):
     print('thumb()')
-    shape = thumb_1x_layout(rotate(single_plate(side=side), (0, 0, -90)))
-    clearance = thumb_1x_layout(rotate(pcb_clearance_shape(), (0, 0, -90)))
-    shape = union([shape, thumb_15x_layout(rotate(single_plate(side=side), (0, 0, -90)))])
-    clearance = union([clearance, thumb_15x_layout(rotate(pcb_clearance_shape(), (0, 0, -90)))])
-    shape = union([shape, thumb_15x_layout(double_plate(), plate=False)])
+    shape = thumb_1x_layout(rotate(single_plate(side=side, pcb_screw="left", high_right=True), (0, 0, -90)))
+    clearance = thumb_1x_layout(rotate(pcb_clearance_shape(pcb_screw="left"), (0, 0, -90)))
+    if not default_1U_cluster:
+        shape = union([shape, thumb_15x_layout(rotate(single_plate(side=side), (0, 0, -90)))])
+        clearance = union([clearance, thumb_15x_layout(rotate(pcb_clearance_shape(), (0, 0, -90)))])
+        shape = union([shape, thumb_15x_layout(double_plate(), plate=False)])
     #clearance = union([clearance, thumb_15x_layout(pcb_clearance_shape(), plate=False)])
 
     export_file(shape=shape, fname=path.join(r"..", "things", r"debug_thumb"))
@@ -834,8 +839,8 @@ def default_thumb_connectors():
         hulls.append(
             triangle_hulls(
                 [
-                    thumb_tl_place(thumb_post_tr()),
-                    thumb_tl_place(thumb_post_br()),
+                    thumb_tl_place(web_post_tr()),
+                    thumb_tl_place(web_post_br()),
                     thumb_tr_place(web_post_tl()),
                     thumb_tr_place(web_post_bl()),
                 ]
@@ -908,11 +913,11 @@ def default_thumb_connectors():
         hulls.append(
             triangle_hulls(
                 [
-                    thumb_tl_place(thumb_post_tl()),
+                    thumb_tl_place(web_post_tl()),
                     thumb_ml_place(web_post_tr()),
-                    thumb_tl_place(thumb_post_bl()),
+                    thumb_tl_place(web_post_bl()),
                     thumb_ml_place(web_post_br()),
-                    thumb_tl_place(thumb_post_br()),
+                    thumb_tl_place(web_post_br()),
                     thumb_mr_place(web_post_tr()),
                     thumb_tr_place(web_post_bl()),
                     thumb_mr_place(web_post_br()),
@@ -942,9 +947,9 @@ def default_thumb_connectors():
         hulls.append(
             triangle_hulls(
                 [
-                    thumb_tl_place(thumb_post_tl()),
+                    thumb_tl_place(web_post_tl()),
                     key_place(web_post_bl(), 0, cornerrow),
-                    thumb_tl_place(thumb_post_tr()),
+                    thumb_tl_place(web_post_tr()),
                     key_place(web_post_br(), 0, cornerrow),
                     thumb_tr_place(web_post_tl()),
                     key_place(web_post_bl(), 1, cornerrow),
@@ -2987,14 +2992,14 @@ def joystick_connection():
     shapes.append(hull_from_shapes([
         left_key_place(web_post(), i, -1),
         translate(web_post(), (x2, y2, joystick_z)),
-        thumb_tl_place(thumb_post_tl())]))
+        thumb_tl_place(web_post_tl())]))
     shapes.append(hull_from_shapes([
         translate(web_post(), (x2, y2, joystick_z)),
-        thumb_tl_place(thumb_post_tl()),
+        thumb_tl_place(web_post_tl()),
         joystick_br_place(web_post())
     ]))
     shapes.append(hull_from_shapes([
-        thumb_tl_place(thumb_post_tl()),
+        thumb_tl_place(web_post_tl()),
         joystick_br_place(web_post()),
         thumb_ml_place(web_post_tr())
     ]))
@@ -3025,7 +3030,7 @@ def joystick_connection():
     #    joystick_bl_place(web_post())
     #]))
     shapes.append(hull_from_shapes([
-        thumb_tl_place(thumb_post_tl()),
+        thumb_tl_place(web_post_tl()),
         left_key_place(web_post(), lastrow - 1, -1, low_corner=True),
         key_place(web_post_bl(), 0, lastrow - 1)
     ]))
