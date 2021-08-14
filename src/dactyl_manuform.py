@@ -149,9 +149,9 @@ wire_post_height = 7
 wire_post_overhang = 3.5
 wire_post_diameter = 2.6
 
-screw_insert_height = 3.8
-screw_insert_bottom_radius = 5.31 / 2
-screw_insert_top_radius = 5.1 / 2
+screw_insert_height = 5.2
+screw_insert_bottom_radius = 4.0 / 2
+screw_insert_top_radius = 3.8 / 2
 
 
 # save_path = path.join("..", "things", save_dir)
@@ -2500,7 +2500,7 @@ def screw_insert(column, row, bottom_radius, top_radius, height):
         shift_left_adjust = wall_base_x_thickness
         shift_right_adjust = -wall_base_x_thickness/2
         shift_down_adjust = -wall_base_y_thickness/2
-        shift_up_adjust = -wall_base_y_thickness/3
+        shift_up_adjust = -wall_base_y_thickness/2
 
     elif screws_offset == 'OUTSIDE':
         debugprint('Shift Outside')
@@ -2577,7 +2577,7 @@ def screw_insert_all_shapes(bottom_radius, top_radius, height, offset=0):
     ]
 
     if use_joystick():
-        shapes.append(translate(screw_insert(0, 0, bottom_radius, top_radius, height), (0, 10, offset)))    
+        shapes.append(translate(screw_insert(0, 0, bottom_radius, top_radius, height), (0, 12, offset)))    
         shapes.append(translate(screw_insert_joystick(bottom_radius, top_radius, height), (0, 0, offset)))
     else:
         shapes.extend([
@@ -2593,8 +2593,8 @@ def screw_insert_holes():
 
 def screw_insert_outers():
     return screw_insert_all_shapes(
-        screw_insert_bottom_radius + 1.6,
-        screw_insert_top_radius + 1.6,
+        screw_insert_bottom_radius + 2.4,
+        screw_insert_top_radius + 2.4,
         screw_insert_height + 1.5,
     )
 
@@ -2788,10 +2788,11 @@ def baseplate(wedge_angle=None):
                         # (loc.x, loc.y, screw_cbore_depth/2)
                     )
                 )
-            shape = difference(shape, hole_shapes)
+            holes = union(hole_shapes)
             shape = translate(shape, (0, 0, -base_rim_thickness))
             shape = union([shape, inner_shape])
-
+            holes = translate(holes, (0, 0, -base_rim_thickness))
+            shape = difference(shape, [holes])
 
         return shape
     else:
@@ -2963,7 +2964,7 @@ def joystick_connection():
         (x, y, z) = left_key_position(i, 1)
         (x2, y2, z2) = left_key_position(i, -1, low_corner=low)
         x2 = x2 + joystick_x_offset if not low else joystick_origin()[0] + 65./2
-        outer_x_offset = joystick_x_offset if i > 0 else joystick_x_offset + 1
+        outer_x_offset = joystick_x_offset if i > 0 else joystick_x_offset + 2.0
         outer_z = joystick_z if i > 0 else joystick_z - 1
         shapes.append(hull_from_shapes([
             left_key_place(web_post(), i, 1),
@@ -3051,13 +3052,13 @@ def joystick_wall():
         wall_brace(joystick_tl_place, 0, 1, web_post(), joystick_tr_place, -0.4, 1, web_post()),
         wall_brace(
             # Was             (lambda sh: left_key_place(sh, 0, 1,)), -1, 1.3, web_post(),
-            (lambda sh: left_key_place(sh, 0, 1,)), -0.5, 0.9, web_post(),
+            (lambda sh: left_key_place(sh, 0, 1,)), -0.5, 1.0, web_post(),
             # joystick_tr_place, -2, 1, web_post()
             joystick_tr_place, -0.4, 1, web_post()
         ),
         wall_brace(
             # Was (lambda sh: left_key_place(sh, 0, 1,)), -1, 1.3, web_post(),
-            (lambda sh: left_key_place(sh, 0, 1,)), -0.5, 0.9, web_post(),
+            (lambda sh: left_key_place(sh, 0, 1,)), -0.5, 1.0, web_post(),
             (lambda sh: key_place(sh, 0, 0,)), 0, 1, web_post_tl(),
         )
 
@@ -3080,7 +3081,7 @@ def screw_insert_joystick(bottom_radius, top_radius, height):
     place[2] = height / 2
     shapes.append(translate(shape, place))
     place = joystick_origin()
-    place[0] -= size + 3
+    place[0] -= size + 2
     if use_oled():
         place[1] += joystick_oled_rim/2
     else:
