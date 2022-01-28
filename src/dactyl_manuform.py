@@ -87,7 +87,7 @@ if nrows > 5:
 centerrow = nrows - centerrow_offset
 
 lastrow = nrows - 1
-cornerrow = lastrow - 1
+cornerrow = lastrow
 lastcol = ncols - 1
 
 
@@ -170,10 +170,12 @@ if use_pcb():
 def pcb_clearance_shape(pcb_screw="right"):
     shape = translate(box(19.2, 19.2, 3), [0, 0, -1.6])
 
+    return shape
+    
     if pcb_screw == "right":
         shape = union([
             shape,
-            translate(cylinder(radius=1.1, height=2.5), [9.398, (-2.191 + 0.349) / 2, 0]),
+            translate(cylinder(radius=1.25, height=2.5), [9.398, (-2.191 + 0.349) / 2, 0]),
             translate(cylinder(radius=4.7/2, height=5), [9.398, (-2.191 + 0.349) / 2, -5])
         ])
         shape = difference(shape, [
@@ -182,7 +184,7 @@ def pcb_clearance_shape(pcb_screw="right"):
     else:
         shape = union([
             shape,
-            translate(cylinder(radius=1.1, height=2.5), [-9.398, (-2.191 + 0.349) / 2, 0]),
+            translate(cylinder(radius=1.25, height=2.5), [-9.398, (-2.191 + 0.349) / 2, 0]),
             translate(cylinder(radius=4.7/2, height=5), [-9.398, (-2.191 + 0.349) / 2, -5])
         ])
         shape = difference(shape, [
@@ -302,20 +304,20 @@ def single_plate(cylinder_segments=100, side="right", pcb_screw="right", high_le
             
         screw_barrel = cylinder(radius=1.1 + 1.2, height=barrel_height)
         pcb_post = cylinder(radius=2.4/2, height=post_height)
-        if pcb_screw == "right":
+        #if pcb_screw == "right":
             #screw_barrel = difference(screw_barrel, [translate(box(1.1 + 1.2, 2 * (1.1 + 1.2), 1.0), [(1.1 + 1.2 + 0.5), 0, -1.0/2 + 2.5])])
             #pcb_post = difference(pcb_post, [translate(box(2.4/2, 2.4, 1.0), [-2.4/4, 0, -1.0/2 + 5])])
-            plate = union([plate,
-                           translate(pcb_post, [-9.398, (-2.191 + 0.349) / 2, -2]),
-                           translate(screw_barrel, [9.398, (-2.191 + 0.349) / 2, 0]),
-            ])
-        else:
+            #plate = union([plate,
+            #               translate(pcb_post, [-9.398, (-2.191 + 0.349) / 2, -2]),
+            #               translate(screw_barrel, [9.398, (-2.191 + 0.349) / 2, 0]),
+            #])
+        #else:
             #screw_barrel = difference(screw_barrel, [translate(box(1.1 + 1.2, 2 * (1.1 + 1.2), 1.0), [-(1.1 + 1.2 + 0.5), 0, -1.0/2 + 2.5])])
             #pcb_post = difference(pcb_post, [translate(box(2.4/2, 2.4, 1.0), [2.4/4, 0, -1.0/2 + 5])])
-            plate = union([plate,
-                           translate(pcb_post, [9.398, (-2.191 + 0.349) / 2, -2]),
-                           translate(screw_barrel, [-9.398, (-2.191 + 0.349) / 2, 0]),
-            ])            
+            #plate = union([plate,
+            #               translate(pcb_post, [9.398, (-2.191 + 0.349) / 2, -2]),
+            #               translate(screw_barrel, [-9.398, (-2.191 + 0.349) / 2, 0]),
+            #])            
         
     return plate
 
@@ -496,15 +498,14 @@ def key_holes(side="right"):
     clearances = []
     for column in range(ncols):
         for row in range(nrows):
-            if (column in [2, 3]) or (not row == lastrow):
-                if column == ncols - 1:
-                    pcb_screw = "left"
-                else:
-                    pcb_screw = "right"
-                high_left = column in [1, 4]
-                high_right = column in [3]
-                holes.append(key_place(single_plate(side=side, pcb_screw=pcb_screw, high_left=high_left, high_right=high_right), column, row))
-                clearances.append(key_place(pcb_clearance_shape(pcb_screw=pcb_screw), column, row))
+            if column == ncols - 1:
+                pcb_screw = "left"
+            else:
+                pcb_screw = "right"
+            high_left = column in [1, 4]
+            high_right = column in [3]
+            holes.append(key_place(single_plate(side=side, pcb_screw=pcb_screw, high_left=high_left, high_right=high_right), column, row))
+            clearances.append(key_place(pcb_clearance_shape(pcb_screw=pcb_screw), column, row))
 
     shape = union(holes)
     clearance = union(clearances)
@@ -516,11 +517,10 @@ def caps():
     caps = None
     for column in range(ncols):
         for row in range(nrows):
-            if (column in [2, 3]) or (not row == lastrow):
-                if caps is None:
-                    caps = key_place(sa_cap(), column, row)
-                else:
-                    caps = add([caps, key_place(sa_cap(), column, row)])
+            if caps is None:
+                caps = key_place(sa_cap(), column, row)
+            else:
+                caps = add([caps, key_place(sa_cap(), column, row)])
 
     return caps
 
@@ -576,8 +576,8 @@ def connectors():
     debugprint('connectors()')
     hulls = []
     for column in range(ncols - 1):
-        for row in range(lastrow):  # need to consider last_row?
-            # for row in range(nrows):  # need to consider last_row?
+        #for row in range(lastrow):  # need to consider last_row?
+        for row in range(nrows):  # need to consider last_row?
             places = []
             places.append(key_place(web_post_tl(), column + 1, row))
             places.append(key_place(web_post_tr(), column, row))
@@ -586,7 +586,7 @@ def connectors():
             hulls.append(triangle_hulls(places))
 
     for column in range(ncols):
-        # for row in range(nrows-1):
+        #for row in range(nrows):
         for row in range(cornerrow):
             places = []
             places.append(key_place(web_post_bl(), column, row))
@@ -596,7 +596,7 @@ def connectors():
             hulls.append(triangle_hulls(places))
 
     for column in range(ncols - 1):
-        # for row in range(nrows-1):  # need to consider last_row?
+        #for row in range(nrows):  # need to consider last_row?
         for row in range(cornerrow):  # need to consider last_row?
             places = []
             places.append(key_place(web_post_br(), column, row))
@@ -641,7 +641,7 @@ def thumb_mr_place(shape):
     debugprint('thumb_mr_place()')
     shape = rotate(shape, [-6, -34, 48])
     shape = translate(shape, thumborigin())
-    shape = translate(shape, [-31, -37, -13])
+    shape = translate(shape, [-32, -37, -13])
     return shape
 
 
@@ -657,7 +657,7 @@ def thumb_br_place(shape):
     debugprint('thumb_br_place()')
     shape = rotate(shape, [-16, -33, 54])
     shape = translate(shape, thumborigin())
-    shape = translate(shape, [-37.8, -55.3, -25.3])
+    shape = translate(shape, [-41.8, -52.3, -25.3])
     return shape
 
 
@@ -665,7 +665,7 @@ def thumb_bl_place(shape):
     debugprint('thumb_bl_place()')
     shape = rotate(shape, [-4, -35, 52])
     shape = translate(shape, thumborigin())
-    shape = translate(shape, [-56.3, -43.3, -23.5])
+    shape = translate(shape, [-61.3, -40.3, -23.5])
     return shape
 
 
@@ -944,7 +944,21 @@ def default_thumb_connectors():
         )
 
     if default_1U_cluster:
+        def web_post_tr2():
+            return translate(web_post_tr(), [1, 1, -1])
+
         hulls.append(
+            triangle_hulls(
+                [
+                    thumb_tr_place(web_post_tl()),
+                    thumb_tr_place(web_post_tr()),
+                    thumb_tr_place(web_post_tr2()),
+                    thumb_tr_place(web_post_br()),
+                    thumb_tr_place(web_post_tr()),
+                    thumb_tr_place(web_post_tr2()),
+                ]))
+        
+        hulls.append(            
             triangle_hulls(
                 [
                     thumb_tl_place(web_post_tl()),
@@ -953,21 +967,33 @@ def default_thumb_connectors():
                     key_place(web_post_br(), 0, cornerrow),
                     thumb_tr_place(web_post_tl()),
                     key_place(web_post_bl(), 1, cornerrow),
-                    thumb_tr_place(web_post_tr()),
+                    thumb_tr_place(web_post_tr2()),
                     key_place(web_post_br(), 1, cornerrow),
-                    key_place(web_post_tl(), 2, lastrow),
+                    #key_place(web_post_tl(), 2, lastrow),
                     key_place(web_post_bl(), 2, lastrow),
-                    thumb_tr_place(web_post_tr()),
+                    key_place(web_post_bl(), 2, cornerrow + 1),
+                    #
+                    thumb_tr_place(web_post_tr2()),
+                    key_place(web_post_br(), 1, cornerrow),
+                    key_place(web_post_bl(), 2, cornerrow + 1),
+                    #
+                    thumb_tr_place(web_post_tr2()),
+                    thumb_tr_place(web_post_br()),
+                    key_place(web_post_bl(), 2, cornerrow + 1),
+                    key_place(web_post_br(), 2, cornerrow),
+                    key_place(web_post_bl(), 2, cornerrow),
+                    key_place(web_post_bl(), 2, cornerrow + 1),
+                    thumb_tr_place(web_post_br()),
                     key_place(web_post_bl(), 2, lastrow),
                     thumb_tr_place(web_post_br()),
                     key_place(web_post_br(), 2, lastrow),
                     key_place(web_post_bl(), 3, lastrow),
-                    key_place(web_post_tr(), 2, lastrow),
-                    key_place(web_post_tl(), 3, lastrow),
+                    #key_place(web_post_tr(), 2, lastrow),
+                    #key_place(web_post_tl(), 3, lastrow),
                     key_place(web_post_bl(), 3, cornerrow),
-                    key_place(web_post_tr(), 3, lastrow),
-                    key_place(web_post_br(), 3, cornerrow),
-                    key_place(web_post_bl(), 4, cornerrow),
+                    #key_place(web_post_tr(), 3, lastrow),
+                    #key_place(web_post_br(), 3, cornerrow),
+                    #key_place(web_post_bl(), 4, cornerrow),
                 ]
             )
         )
@@ -990,39 +1016,39 @@ def default_thumb_connectors():
                     thumb_tr_place(thumb_post_br()),
                     key_place(web_post_br(), 2, lastrow),
                     key_place(web_post_bl(), 3, lastrow),
-                    key_place(web_post_tr(), 2, lastrow),
-                    key_place(web_post_tl(), 3, lastrow),
+                    #key_place(web_post_tr(), 2, lastrow),
+                    #key_place(web_post_tl(), 3, lastrow),
                     key_place(web_post_bl(), 3, cornerrow),
-                    key_place(web_post_tr(), 3, lastrow),
+                    #key_place(web_post_tr(), 3, lastrow),
                     key_place(web_post_br(), 3, cornerrow),
-                    key_place(web_post_bl(), 4, cornerrow),
+                    #key_place(web_post_bl(), 4, cornerrow),
                 ]
             )
         )
 
-    hulls.append(
-        triangle_hulls(
-            [
-                key_place(web_post_br(), 1, cornerrow),
-                key_place(web_post_tl(), 2, lastrow),
-                key_place(web_post_bl(), 2, cornerrow),
-                key_place(web_post_tr(), 2, lastrow),
-                key_place(web_post_br(), 2, cornerrow),
-                key_place(web_post_bl(), 3, cornerrow),
-            ]
-        )
-    )
+    #hulls.append(
+    #    triangle_hulls(
+    #        [
+    #            key_place(web_post_br(), 1, cornerrow),
+    #            key_place(web_post_tl(), 2, lastrow),
+    #            key_place(web_post_bl(), 2, cornerrow),
+    #            key_place(web_post_tr(), 2, lastrow),
+    #            key_place(web_post_br(), 2, cornerrow),
+    #            key_place(web_post_bl(), 3, cornerrow),
+    #        ]
+    #    )
+    #)
 
-    hulls.append(
-        triangle_hulls(
-            [
-                key_place(web_post_tr(), 3, lastrow),
-                key_place(web_post_br(), 3, lastrow),
-                key_place(web_post_tr(), 3, lastrow),
-                key_place(web_post_bl(), 4, cornerrow),
-            ]
-        )
-    )
+    #hulls.append(
+    #    triangle_hulls(
+    #        [
+    #            key_place(web_post_tr(), 3, lastrow),
+    #            key_place(web_post_br(), 3, lastrow),
+    #            key_place(web_post_tr(), 3, lastrow),
+    #            key_place(web_post_bl(), 4, cornerrow),
+    #        ]
+    #    )
+    #)
 
     return union(hulls)
 
@@ -1604,7 +1630,7 @@ def wall_locate1(dx, dy):
 
 def wall_locate2(dx, dy):
     debugprint("wall_locate2()")
-    return [dx * wall_x_offset, dy * wall_y_offset, -wall_z_offset]
+    return [dx * wall_x_offset, dy * wall_y_offset, -wall_z_offset] 
 
 
 def wall_locate3(dx, dy, back=False):
@@ -1694,7 +1720,7 @@ def right_wall():
         )
     ])
 
-    for i in range(lastrow - 1):
+    for i in range(lastrow):
         y = i + 1
         shape = union([shape,key_wall_brace(
             lastcol, y - 1, 1, 0, web_post_br(), lastcol, y, 1, 0, web_post_tr()
@@ -1726,9 +1752,9 @@ def left_wall():
 
     #export_file(shape=shape, fname=path.join(r"..", "things", r"debug_left_wall1"))
     
-    for i in range(lastrow):
+    for i in range(nrows):
         y = i
-        low = (y == (lastrow-1))
+        low = (y == (nrows-1))
         temp_shape1 = wall_brace(
             (lambda sh: left_key_place(sh, y, 1,)), -1, 0, web_post(),
             (lambda sh: left_key_place(sh, y, -1, low_corner=low)), -1, 0, web_post(),
@@ -1745,9 +1771,9 @@ def left_wall():
         else:
             shape = union([shape, temp_shape2])
 
-    for i in range(lastrow - 1):
+    for i in range(nrows - 1):
         y = i + 1
-        low = (y == (lastrow-1))
+        low = (y == (nrows-1))
         temp_shape1 = wall_brace(
             (lambda sh: left_key_place(sh, y - 1, -1)), -1, 0, web_post(),
             (lambda sh: left_key_place(sh, y, 1)), -1, 0, web_post(),
@@ -1774,10 +1800,10 @@ def front_wall():
         )
     ])
     shape = union([shape,key_wall_brace(
-        3, lastrow, 0, -1, web_post_bl(), 3, lastrow, 0.5, -1, web_post_br()
+        3, lastrow, 0, -1, web_post_bl(), 3, lastrow, 0, -1, web_post_br()
     )])
     shape = union([shape,key_wall_brace(
-        3, lastrow, 0.5, -1, web_post_br(), 4, cornerrow, 1, -1, web_post_bl()
+        3, lastrow, 0, -1, web_post_br(), 4, cornerrow, 1, -1, web_post_bl()
     )])
     for i in range(ncols - 4):
         x = i + 4
@@ -2499,8 +2525,8 @@ def screw_insert(column, row, bottom_radius, top_radius, height):
         # debugprint('Shift Inside')
         shift_left_adjust = wall_base_x_thickness
         shift_right_adjust = -wall_base_x_thickness/2
-        shift_down_adjust = -wall_base_y_thickness/2
-        shift_up_adjust = -wall_base_y_thickness/2
+        shift_down_adjust = -wall_base_y_thickness/1.3
+        shift_up_adjust = -wall_base_y_thickness/1.3
 
     elif screws_offset == 'OUTSIDE':
         debugprint('Shift Outside')
@@ -2559,7 +2585,7 @@ def screw_insert_thumb(bottom_radius, top_radius, height):
 
     else:
         position = thumborigin()
-        position = list(np.array(position) + np.array([-21, -58, 0]))
+        position = list(np.array(position) + np.array([-24, -54, 0]))
         position[2] = 0
 
     shape = screw_insert_shape(bottom_radius, top_radius, height)
@@ -2572,7 +2598,7 @@ def screw_insert_all_shapes(bottom_radius, top_radius, height, offset=0):
         translate(screw_insert(3, lastrow, bottom_radius, top_radius, height), (0, 0, offset)),
         translate(screw_insert(3, 0, bottom_radius, top_radius, height), (0,0, offset)),
         translate(screw_insert(lastcol, 0, bottom_radius, top_radius, height), (0, 0, offset)),
-        translate(screw_insert(lastcol, lastrow-1, bottom_radius, top_radius, height), (0, 0, offset)),
+        translate(screw_insert(lastcol, lastrow, bottom_radius, top_radius, height), (0, 0, offset)),
         translate(screw_insert_thumb(bottom_radius, top_radius, height), (0, 0, offset)),
     ]
 
@@ -2783,7 +2809,7 @@ def baseplate(wedge_angle=None):
                 loc = hole.Center()
                 hole_shapes.append(
                     translate(
-                        cylinder(screw_cbore_diameter, screw_cbore_depth),
+                        cylinder(radius=screw_cbore_diameter/2, height=screw_cbore_depth),
                         (loc.x, loc.y, 0)
                         # (loc.x, loc.y, screw_cbore_depth/2)
                     )
@@ -2816,12 +2842,15 @@ joystick_z_height = 30 # Space under plate for gimbal mechanism.
 
 def joystick_origin():
     origin = thumborigin()
-    offset = [-85, 20, -20, 0]
+    offset = [-80, 17, -20, 0]
     for i in range(0, 3):
         origin[i] += offset[i]
     origin[2] = joystick_z_height + joystick_plate_thickness/2
     return origin
-    
+
+def joystick_rotation():
+    return [0, 0, 23]
+
 def joystick_shape():
     y_offset = 0
     top = box(65, 65, joystick_plate_thickness)
@@ -2846,16 +2875,19 @@ def joystick_shape():
         top = difference(top, [oled_hole])
         top = union([top, oled_frame])
 
-    cutout = translate(cylinder(radius=24.25, height=2*joystick_plate_thickness), [0, y_offset, -joystick_plate_thickness/2])
+    cutout = translate(cylinder(radius=24.75, height=2*joystick_plate_thickness), [0, y_offset, -joystick_plate_thickness/2])
     screwhole = translate(cylinder(radius=1.6, height=2*joystick_plate_thickness), [0, 0, -joystick_plate_thickness/2])
     corner_clearance = translate(cylinder(radius=5, height=5), [0, 0, -joystick_plate_thickness/2 - 5])
     countersink = translate(cylinder(radius=5.7/2, height=3.1), [0, 0, joystick_plate_thickness/2 - 3.1])
     screw_clearance = translate(cylinder(radius=5.7/2, height=20), [0, 0, joystick_plate_thickness/2])
     screw_dist = 54
     cutouts = [cutout]
-    locator = translate(cylinder(radius=5.6/2, height=2.5), [0, 0, -joystick_plate_thickness/2])
+    locator = translate(cylinder(radius=6/2, height=2.5), [0, 0, -joystick_plate_thickness/2])
     for i in range(-1, 2, 2):
         for j in range(-1, 2, 2):
+            if i == 1 and j == -1:
+                continue
+            
             cutouts.append(translate(screwhole, [i * screw_dist/2.0, j * screw_dist/2.0 + y_offset, 0]))
             cutouts.append(translate(locator, [i * screw_dist/2.0, j * screw_dist/2.0 + y_offset, 0]))
             cutouts.append(translate(corner_clearance, [i * screw_dist/2.0, j * screw_dist/2.0 + y_offset, 0])) # Gimbal top plate corners
@@ -2866,8 +2898,10 @@ def joystick_shape():
     #top = difference(top, cutouts)
     if debug_exports:
         export_file(shape=top, fname=path.join(r"..", "things", r"debug_joystick"))
-        
+    
+    top = rotate(top, joystick_rotation())
     shape = translate(top, joystick_origin())
+    cutout = rotate(cutout, joystick_rotation())
     cutout = translate(cutout, joystick_origin())
     shape = union([shape, joystick_connection()])
     shape = difference(shape, [cutout])
@@ -2889,7 +2923,7 @@ def joystick_prox_cutout():
     prox_cutout = joystick_prox_cutout_shape()
     #prox_cutout = rotate(prox_cutout, [0, 0, 45])
     prox_cutout = translate(prox_cutout, joystick_origin())
-    prox_cutout = translate(prox_cutout, [20 + 10, -24 + 10, 1])
+    prox_cutout = translate(prox_cutout, [20 + 10 + 1, -24 + 10 + 0.5, 2])
     return prox_cutout
 
 def joystick_corners():
@@ -2902,92 +2936,148 @@ def joystick_corners():
 joystick_z_offset = plate_thickness - joystick_plate_thickness / 2
             
 def joystick_tl_place(shape):
-    place = joystick_origin()
     size = 65./2
-    place[0] -= size
-    place[1] += size
+    place = [
+        -size,
+        size,
+        -joystick_z_offset
+    ]
     if use_oled():
         place[1] += joystick_oled_rim
-    place[2] -= joystick_z_offset
-    return translate(shape, place)
+
+    shape = translate(shape, place)
+    shape = rotate(shape, joystick_rotation())
+    shape = translate(shape, joystick_origin())
+    
+    return shape
 
 def joystick_bl_place(shape):
-    place = joystick_origin()
     size = 65./2
-    place[0] -= size
-    place[1] -= size
-    place[2] -= joystick_z_offset
-    return translate(shape, place)
+    place = [
+        -size,
+        -size,
+        -joystick_z_offset]
+
+    shape = translate(shape, place)
+    shape = rotate(shape, joystick_rotation())
+    shape = translate(shape, joystick_origin())
+    
+    return shape
+
+def joystick_bl2_place(shape):
+    size = 65./2
+    place = [
+        -size,
+        -(size + 4.5),
+        -(joystick_z_offset + 1)]
+
+    shape = translate(shape, place)
+    shape = rotate(shape, joystick_rotation())
+    shape = translate(shape, joystick_origin())
+
+    return shape
 
 def joystick_bm_place(shape):
-    place = joystick_origin()
     size = 65./2
-    place[0] -= 5
-    place[1] -= size
-    place[2] -= joystick_z_offset
-    return translate(shape, place)
+    place = [
+        -5,
+        -size,
+        -joystick_z_offset]
+
+    shape = translate(shape, place)
+    shape = rotate(shape, joystick_rotation())
+    shape = translate(shape, joystick_origin())
+    
+    return shape
 
 def joystick_bm2_place(shape):
-    place = joystick_origin()
     size = 65./2
-    place[0] -= 5
-    place[1] -= size + 4.5
-    place[2] -= joystick_z_offset + 1
-    return translate(shape, place)
+    place = [
+        -5,
+        -(size + 4.5),
+        -(joystick_z_offset + 1)]
+
+    shape = translate(shape, place)
+    shape = rotate(shape, joystick_rotation())
+    shape = translate(shape, joystick_origin())
+
+    return shape
 
 def joystick_tr_place(shape): 
-    place = joystick_origin()
     size = 65./2
-    place[0] += size
-    place[1] += size
+    place = [
+        size,
+        size,
+        -joystick_z_offset]
     if use_oled():
         place[1] += joystick_oled_rim
-    place[2] -= joystick_z_offset
-    return translate(shape, place)   
+
+    shape = translate(shape, place)
+    shape = rotate(shape, joystick_rotation())
+    shape = translate(shape, joystick_origin())
+    
+    return shape
 
 def joystick_br_place(shape): 
-    place = joystick_origin()
     size = 65./2
-    place[0] += size
-    place[1] -= size
-    place[2] -= joystick_z_offset
-    return translate(shape, place)   
+    place = [
+        size,
+        -size,
+        -joystick_z_offset]
+
+    shape = translate(shape, place)
+    shape = rotate(shape, joystick_rotation())
+    shape = translate(shape, joystick_origin())
+    
+    return shape
 
 def joystick_connection():
     joystick_x_offset = -8
     joystick_x, joystick_y, joystick_z = joystick_origin()
     joystick_z -= joystick_z_offset
     shapes = []
-    for i in range(lastrow):
+    
+    for i in range(nrows):        
         y = i
-        low = (y == (lastrow-1))
+        low = (y == (nrows-1))
         (x, y, z) = left_key_position(i, 1)
         (x2, y2, z2) = left_key_position(i, -1, low_corner=low)
         x2 = x2 + joystick_x_offset if not low else joystick_origin()[0] + 65./2
-        outer_x_offset = joystick_x_offset if i > 0 else joystick_x_offset + 2.0
+        if i == 0:
+            x2 -= 2.0
+        outer_x_offset = joystick_x_offset if i > 1 else joystick_x_offset -2.0
         outer_z = joystick_z if i > 0 else joystick_z - 1
+
+        if i == 0:
+            top_post = joystick_tr_place(web_post())
+        else:
+            top_post = translate(web_post(), (x + outer_x_offset, y, outer_z))
+        
         shapes.append(hull_from_shapes([
             left_key_place(web_post(), i, 1),
             left_key_place(web_post(), i, -1, low_corner=low),
             #key_place(web_post_tl(), 0, i),
             #key_place(web_post_bl(), 0, i),
-            translate(web_post(), (x + outer_x_offset, y, outer_z)),
+            top_post,
             translate(web_post(), (x2, y2, joystick_z))
             ]))
 
-    for i in range(lastrow - 1):
+    for i in range(nrows - 1):
         y = i + 1
-        low = (y == (lastrow-1))
+        low = (y == (nrows-1))
         (x1, y1, z1) = left_key_position(y, 1)
         (x2, y2, z2) = left_key_position(y - 1, -1, low_corner=low)
+
+        outer_x_offset = joystick_x_offset if i > 0 else joystick_x_offset -2.0
+        
         shapes.append(hull_from_shapes([
             left_key_place(web_post(), y, 1),
             left_key_place(web_post(), y - 1, -1),
-            translate(web_post(), (x1 + joystick_x_offset, y1, joystick_z)),
-            translate(web_post(), (x2 + joystick_x_offset, y2, joystick_z)),
+            translate(web_post(), (x1 + outer_x_offset, y1, joystick_z)),
+            translate(web_post(), (x2 + outer_x_offset, y2, joystick_z)),
         ]))
 
-    i = lastrow - 1
+    i = nrows - 1
     (x2, y2, z2) = left_key_position(i, -1, low_corner=True)
     x2 = joystick_origin()[0] + 65./2
     shapes.append(hull_from_shapes([
@@ -3017,12 +3107,19 @@ def joystick_connection():
     ]))
     shapes.append(hull_from_shapes([
         thumb_ml_place(web_post_tl()),
+        joystick_bl2_place(web_post()),
+        joystick_bl_place(web_post()),
         joystick_bm2_place(web_post()),
+        joystick_bm_place(web_post())
+    ]))
+    shapes.append(hull_from_shapes([
+        thumb_ml_place(web_post_tl()),
+        joystick_bl2_place(web_post()),
         thumb_bl_place(web_post_tr())
     ]))
     shapes.append(hull_from_shapes([
         thumb_bl_place(web_post_tl()),
-        joystick_bm2_place(web_post()),
+        joystick_bl2_place(web_post()),
         thumb_bl_place(web_post_tr())
     ]))
     #shapes.append(hull_from_shapes([
@@ -3032,8 +3129,8 @@ def joystick_connection():
     #]))
     shapes.append(hull_from_shapes([
         thumb_tl_place(web_post_tl()),
-        left_key_place(web_post(), lastrow - 1, -1, low_corner=True),
-        key_place(web_post_bl(), 0, lastrow - 1)
+        left_key_place(web_post(), lastrow, -1, low_corner=True),
+        key_place(web_post_bl(), 0, lastrow)
     ]))
     
     return union(shapes)
@@ -3043,8 +3140,9 @@ def joystick_wall():
         #wall_brace(joystick_tl_place, 0, 0, web_post(), joystick_bl_place, 0, 0, web_post()), # tl bl
         #wall_brace(joystick_tl_place, 0, 0, web_post(), joystick_tr_place, 0, 0, web_post()), # tl tr
         #wall_brace(joystick_bl_place, 0, -1, web_post(), thumb_bl_place, -1, 0, web_post_tl()), # bl bl
-        wall_brace(joystick_bm_place, 0, -1, web_post(), thumb_bl_place, -1, 0, web_post_tl()), # bl bl
-        wall_brace(joystick_bm_place, 0, -1, web_post(), joystick_bl_place, 0, -1, web_post()), # bl bl
+        #wall_brace(joystick_bm_place, 0, -1, web_post(), thumb_bl_place, -1, 0, web_post_tl()), # bl bl
+        #wall_brace(joystick_bm_place, 0, -1, web_post(), joystick_bl_place, 0, -1, web_post()), # bl bl
+        wall_brace(joystick_bl_place, 0, -1, web_post(), thumb_bl_place, -1, 0, web_post_tl()),
         wall_brace(joystick_bl_place, -1, 0, web_post(), joystick_bl_place, 0, -1, web_post()),
         wall_brace(joystick_bl_place, -1, 0, web_post(), joystick_tl_place, -1, 0, web_post()),
         wall_brace(joystick_tl_place, -1, 0, web_post(), joystick_tl_place, 0, 1, web_post()),
@@ -3067,32 +3165,32 @@ def joystick_wall():
 def screw_insert_joystick(bottom_radius, top_radius, height):
     shape = screw_insert_shape(bottom_radius, top_radius, height)
     size = 65./2
-    place = joystick_origin()
-    place[0] -= 5
-    place[1] -= size + 4
-    place[2] = height / 2
+    #place = joystick_origin()
+    place = [-5 - 9, -(size + 4) - 13, height / 2]
     shapes = []
     shapes.append(translate(shape, place))
-    place = joystick_origin()
-    place[0] -= size - 4
-    place[1] += size + 4
+    place = [-(size - 4), size + 4, height / 2]
     if use_oled():
         place[1] += joystick_oled_rim
-    place[2] = height / 2
     shapes.append(translate(shape, place))
-    place = joystick_origin()
-    place[0] -= size + 2
+    place = [-(size + 2), 0, height / 2]
     if use_oled():
         place[1] += joystick_oled_rim/2
     else:
         place[1] -= 5
-    place[2] = height / 2
     shapes.append(translate(shape, place))
-    return union(shapes)
+
+    shape = union(shapes)
+    shape = rotate(shape, joystick_rotation())
+    place = joystick_origin()
+    place[2] = 0
+    shape = translate(shape, place)
+    
+    return shape
 
 def joystick_prox_cutout_shape():
-    shape1 = translate(box(3.94 + 0.2, 2.36 + 0.2, 10), [0, 0, 5])
-    shape2 = translate(box(25, 18, 10), [25./2 - 4 - 2.36/2, 0, -5])
+    shape1 = translate(box(3.94 + 0.7, 2.36 + 0.2, 10), [0, 0, 5])
+    shape2 = translate(box(26, 18, 10), [25./2 - 4 - 2.36/2, 0, -5])
     return union([shape1, shape2])
 
 def run():
