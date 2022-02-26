@@ -2708,7 +2708,11 @@ def model_side(side="right"):
         s2 = difference(s2, [rj9_space()])
 
     if controller_mount_type in ['EXTERNAL']:
+        temp = s2
         s2 = difference(s2, [external_mount_hole()])
+        tray_wall = difference(temp, [s2])
+        #tray_wall = intersect(s2, external_mount_hole())
+        export_file(shape=tray_wall, fname=path.join("..", "things", "tray_wall"))
 
     if controller_mount_type in ['None']:
         0 # do nothing, only here to expressly state inaction.
